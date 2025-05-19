@@ -143,9 +143,11 @@ const showPhrase = ref(false);
 const phraseFilled = ref(false);
 const showHint = ref(false);
 
+const API_BASE_URL = import.meta.env.VITE_API_URL
+
 async function getAccessToken() {
   try {
-    const response = await axios.post("http://localhost:3000/getAccessToken");
+    const response = await axios.post(`${API_BASE_URL}/getAccessToken`);
     accessToken.value = response.data.access_token;
     return true;
   } catch (err) {
@@ -167,7 +169,7 @@ async function generatePhrase(mode) {
       return;
     }
 
-    const response = await axios.post("http://localhost:3000/generatePhrase", {
+    const response = await axios.post(`${API_BASE_URL}/generatePhrase`, {
       access_token: accessToken.value,
       mode: mode,
       uid: currentUser.value.uid,
