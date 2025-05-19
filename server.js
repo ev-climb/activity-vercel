@@ -1,11 +1,22 @@
 import express from 'express';
 import axios from 'axios';
 import https from 'https';
-import cors from 'cors'; // Добавляем пакет cors
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+
+import { fileURLToPath } from 'url';
 
 import { db } from './firebaseAdmin.js';
-import { log } from 'console';
 
+dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+app.use(express.static(path.join(__dirname, 'client/dist')));
+app.get('*', (_, res) => {
+  res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+});
 
 const app = express();
 const port = 3000;
@@ -27,8 +38,10 @@ app.post('/getAccessToken', async (req, res) => {
   const headers = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'Accept': 'application/json',
-    'RqUID': 'd5f849d1-08b5-4a15-8644-585ce3676a06',
-    'Authorization': 'Basic NzU3ZjY0NmEtMjBkMC00ZDEzLWJlYmQtYzk5YTYyNmIzNmNhOjIwM2U4ZWExLWZmNzAtNDVkMy1iMWI2LThmZjllZTdlOTY3MA=='
+    'RqUID': process.env.RQ_UID,
+    'Authorization': `Basic ${process.env.AUTH}`,
+    // 'RqUID': 'd5f849d1-08b5-4a15-8644-585ce3676a06',
+    // 'Authorization': 'Basic NzU3ZjY0NmEtMjBkMC00ZDEzLWJlYmQtYzk5YTYyNmIzNmNhOjIwM2U4ZWExLWZmNzAtNDVkMy1iMWI2LThmZjllZTdlOTY3MA=='
   };
 
   try {
