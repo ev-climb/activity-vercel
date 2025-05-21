@@ -29,3 +29,5 @@ coverage
 
 *.tsbuildinfo
 serviceAccountKey.json
+.env
+.env
