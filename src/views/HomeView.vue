@@ -6,12 +6,17 @@
       <section v-if="showPhrase" class="phrase-container">
         <QuestionIcon
           v-if="isPaused && phrase"
-          class="question"
+          class="round-icon question"
           @mousedown="showHint = true"
           @mouseup="showHint = false"
           @mouseleave="showHint = false"
           @touchstart.prevent="showHint = true"
           @touchend.prevent="showHint = false"
+        />
+        <StopIcon
+          v-if="isPaused && phrase"
+          class="round-icon stop"
+          @click.stop="stopGame"
         />
 
         <p v-if="showHint" class="hint">{{ phrase }}</p>
@@ -21,33 +26,26 @@
           <p>{{ error }}</p>
           <RotateIcon class="rotate" @click="stopGame()" />
         </div>
-        <div
-          v-else
-          class="circle"
-          :class="{ 'fill-animation': phraseFilled }"
-          @click="togglePause"
-        >
-          <div v-if="loading" class="loader-container">
-            <span class="loader">Load&nbsp;ng</span>
-          </div>
-          <template v-else>
-            <div class="wave-container">
-              <div class="wave-below fill"></div>
+        <template v-else>
+          <div
+            class="circle"
+            :class="{ 'fill-animation': phraseFilled }"
+            @click="togglePause"
+          >
+            <div v-if="loading" class="loader-container">
+              <span class="loader">Load&nbsp;ng</span>
             </div>
-            <p v-if="showPhraseText" class="phrase">{{ phrase }}</p>
-            <p v-else-if="!isPaused && showTimer" class="phrase timer">{{ timer }}</p>
+            <template v-else>
+              <div class="wave-container">
+                <div class="wave-below fill"></div>
+              </div>
+              <p v-if="showPhraseText" class="phrase">{{ phrase }}</p>
+              <p v-else-if="!isPaused && showTimer" class="phrase timer">{{ timer }}</p>
 
-            <div v-else class="pause-btns">
-              <div class="timer-icon">
-                <StopIcon class="stop" @click.stop="stopGame" />
-              </div>
-              <PauseIcon class="pause" />
-              <div class="timer-icon">
-                <PlayIcon class="play" @click.stop="togglePause" />
-              </div>
-            </div>
-          </template>
-        </div>
+              <PauseIcon v-else class="pause" />
+            </template>
+          </div>
+        </template>
       </section>
 
       <template v-else>
@@ -143,7 +141,7 @@ const showPhrase = ref(false);
 const phraseFilled = ref(false);
 const showHint = ref(false);
 
-const API_BASE_URL = import.meta.env.VITE_API_URL
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 async function getAccessToken() {
   try {
@@ -334,9 +332,9 @@ watch(loading, (newVal, oldVal) => {
 watch(countdown, (value) => {
   if (value === 0) {
     showTimer.value = false;
-    isPaused.value = false; // ❗️убираем паузу
-    isPreparing.value = false; // ❗️на всякий случай
-    showPhraseText.value = true; // ❗️показываем текст фразы
+    isPaused.value = false;
+    isPreparing.value = false;
+    showPhraseText.value = true;
   }
   if (value === 119) {
     startSound.currentTime = 0;
@@ -739,76 +737,46 @@ main {
   }
 }
 
-.pause-btns {
+.pause {
+  width: 30px;
+  height: 30px;
+  color: #fff;
+  cursor: pointer;
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  gap: 10%;
-  .timer-icon {
-    width: 30px;
-    height: 30px;
+  z-index: 100;
+  svg {
+    width: 90%;
+    height: 90%;
+    filter: drop-shadow(0 0 15px #f8f8f8ec);
     color: #fff;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #ffffff2d;
-    border-radius: 10%;
-    box-shadow: 0 0 5px #f8f8f8ec;
-    padding: 10px;
-    z-index: 100;
-    background: #a7da982d;
-    svg {
-      width: 90%;
-      height: 90%;
-    }
-    .play {
-      filter: drop-shadow(0 0 15px #06eeb4ec);
-      color: #03923f;
-    }
-    .stop {
-      filter: drop-shadow(0 0 15px #e40808ec);
-      color: #750404;
-      transition: transform 0.1s ease, filter 0.1s ease;
-
-      &:active {
-        transform: scale(0.95);
-        filter: brightness(0.9);
-      }
-    }
-    &:first-child {
-      background: #e90c0c54;
-    }
-  }
-  .pause {
-    width: 30px;
-    height: 30px;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    svg {
-      width: 90%;
-      height: 90%;
-      filter: drop-shadow(0 0 15px #f8f8f8ec);
-      color: #fff;
-    }
   }
 }
 
 .red-bg {
   background: linear-gradient(to bottom, #ff1100 0%, #fff 100%);
 }
-.question {
+.round-icon {
+  color: #fff;
+  filter: drop-shadow(0 0 10px #e40808ec);
   position: absolute;
   width: 30px;
   height: 30px;
+}
+.question {
   top: 20%;
-  color: #fff;
-  filter: drop-shadow(0 0 10px #e40808ec);
+}
+.stop {
+  top: 24%;
+  left: 20%;
+  /* filter: drop-shadow(0 0 10px black); */
+  transition: transform 0.1s ease, filter 0.1s ease;
+
+  &:active {
+    transform: scale(0.95);
+    filter: brightness(0.9);
+  }
 }
 .hint {
   position: absolute;

@@ -9,17 +9,17 @@ import { fileURLToPath } from 'url';
 
 import { db } from './firebaseAdmin.js';
 
+const app = express();
+const port = process.env.PORT || 3000;
+
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-app.use(express.static(path.join(__dirname, 'client/dist')));
-app.get('*', (_, res) => {
-  res.sendFile(path.join(__dirname, 'client/dist/index.html'));
-});
-
-const app = express();
-const port = process.env.PORT || 3000;
+// app.use(express.static(path.join(__dirname, 'client/dist')));
+// app.get('*', (_, res) => {
+//   res.sendFile(path.join(__dirname, 'client/dist/index.html'));
+// });
 
 // Middleware
 app.use(cors()); // Разрешаем все CORS-запросы
