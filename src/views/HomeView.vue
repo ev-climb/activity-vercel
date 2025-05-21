@@ -770,7 +770,6 @@ main {
 .stop {
   top: 24%;
   left: 20%;
-  /* filter: drop-shadow(0 0 10px black); */
   transition: transform 0.1s ease, filter 0.1s ease;
 
   &:active {

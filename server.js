@@ -40,8 +40,6 @@ app.post('/getAccessToken', async (req, res) => {
     'Accept': 'application/json',
     'RqUID': process.env.RQ_UID,
     'Authorization': `Basic ${process.env.AUTH}`,
-    // 'RqUID': 'd5f849d1-08b5-4a15-8644-585ce3676a06',
-    // 'Authorization': 'Basic NzU3ZjY0NmEtMjBkMC00ZDEzLWJlYmQtYzk5YTYyNmIzNmNhOjIwM2U4ZWExLWZmNzAtNDVkMy1iMWI2LThmZjllZTdlOTY3MA=='
   };
 
   try {
