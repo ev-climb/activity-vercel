@@ -143,18 +143,6 @@ const showHint = ref(false);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-async function getAccessToken() {
-  try {
-    const response = await axios.post(`${API_BASE_URL}/getAccessToken`);
-    accessToken.value = response.data.access_token;
-    return true;
-  } catch (err) {
-    console.error("Ошибка получения токена:", err);
-    error.value = "Не удалось получить токен доступа";
-    return false;
-  }
-}
-
 async function generatePhrase(mode) {
   loading.value = true;
   error.value = null;
@@ -163,37 +151,28 @@ async function generatePhrase(mode) {
   phraseFilled.value = false;
 
   try {
-    if (!accessToken.value && !(await getAccessToken())) {
-      return;
-    }
-
     const response = await axios.post(`${API_BASE_URL}/generatePhrase`, {
-      access_token: accessToken.value,
-      mode: mode,
+      mode,
       uid: currentUser.value.uid,
     });
 
     phrase.value = response?.data?.phrase;
-    if (!phrase.value) {
-      throw new Error("Фраза не найдена");
-    }
+    if (!phrase.value) throw new Error("Фраза не найдена");
 
     setTimeout(() => {
       phraseFilled.value = true;
     }, 1000);
+
     savePhrase(phrase.value);
   } catch (err) {
     console.error("Ошибка при генерации фразы:", err);
-    error.value = err.response?.data?.error || "Не удалось сгенерировать фразу";
-
-    if (err.response?.status === 401) {
-      accessToken.value = null;
-      await generatePhrase();
-    }
+    error.value =
+      err.response?.data?.error || "Не удалось сгенерировать фразу";
   } finally {
     loading.value = false;
   }
 }
+
 
 function startCountdown() {
   showTimer.value = true;

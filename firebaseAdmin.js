@@ -1,6 +1,11 @@
 // firebaseAdmin.js
 import admin from 'firebase-admin';
-import serviceAccount from './serviceAccountKey.json' assert { type: 'json' };
+
+if (!process.env.FIREBASE_KEY) {
+  throw new Error('FIREBASE_KEY is not defined in environment variables');
+}
+
+const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
 if (!admin.apps.length) {
   admin.initializeApp({
