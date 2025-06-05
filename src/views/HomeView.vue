@@ -98,7 +98,15 @@ import { onMounted, ref, watch, nextTick } from "vue";
 import axios from "axios";
 
 import { logout, checkAuth, currentUser } from "@/stores/auth";
-import { saveCurrentPhrase, getNewPhrases, newPhrases, removeUsedNewPhrase, getUserPhrases, saveNewPhrases, userPhrases } from "@/stores/phrases";
+import {
+  saveCurrentPhrase,
+  getNewPhrases,
+  newPhrases,
+  removeUsedNewPhrase,
+  getUserPhrases,
+  saveNewPhrases,
+  userPhrases,
+} from "@/stores/phrases";
 import { loadSettings, saveUserSettings } from "@/stores/settings";
 
 import GlobalLoader from "@/components/GlobalLoader.vue";
@@ -174,16 +182,25 @@ async function generatePhrase(mode) {
 
     const list = response?.data?.phrases || [];
     if (!Array.isArray(list) || list.length === 0) throw new Error("Фразы не найдены");
+    console.log("Сгенерированные фразы:", list);
 
-    const existing = userPhrases.value.map(p => p.toLowerCase());
-    const normalize = s => s.toLowerCase().replace(/[.,!?"'«»]/g, '').trim();
+    const existing = userPhrases.value.map((p) => p.toLowerCase());
+    const normalize = (s) =>
+      s
+        .toLowerCase()
+        .replace(/[.,!?"'«»]/g, "")
+        .trim();
 
-    const unique = list.filter(p => {
-      const normalized = normalize(p);
-      return !existing.some(e => normalized.includes(e) || e.includes(normalize(e)));
+    const unique = list.filter((p) => {
+      const norm = normalize(p);
+      return !existing.some((e) => {
+        const en = normalize(e);
+        return norm.includes(en) || en.includes(norm);
+      });
     });
 
-    if (unique.length === 0) throw new Error("Все сгенерированные фразы уже использованы");
+    if (unique.length === 0)
+      throw new Error("Все сгенерированные фразы уже использованы");
 
     const nextPhrase = unique[0];
     phrase.value = nextPhrase;
@@ -195,7 +212,6 @@ async function generatePhrase(mode) {
     setTimeout(() => {
       phraseFilled.value = true;
     }, 1000);
-
   } catch (err) {
     console.error("Ошибка при генерации фразы:", err);
     error.value = err.response?.data?.error || "Не удалось сгенерировать фразу";
