@@ -5,7 +5,7 @@
     <template v-else>
       <section v-if="showPhrase" class="phrase-container">
         <QuestionIcon
-          v-if="isPaused && phrase"
+          v-if="!isPreparing && phrase"
           class="round-icon question"
           @mousedown="showHint = true"
           @mouseup="showHint = false"
@@ -98,7 +98,7 @@ import { onMounted, ref, watch, nextTick } from "vue";
 import axios from "axios";
 
 import { logout, checkAuth, currentUser } from "@/stores/auth";
-import { savePhrase } from "@/stores/phrases";
+import { saveCurrentPhrase, getNewPhrases, newPhrases, removeUsedNewPhrase, getUserPhrases, saveNewPhrases, userPhrases } from "@/stores/phrases";
 import { loadSettings, saveUserSettings } from "@/stores/settings";
 
 import GlobalLoader from "@/components/GlobalLoader.vue";
@@ -110,7 +110,6 @@ import Show from "@/components/icons/Show.vue";
 import Speak from "@/components/icons/Speak.vue";
 import LogOutIcon from "@/components/icons/LogOutIcon.vue";
 import SettingsIcon from "@/components/icons/SettingsIcon.vue";
-import PlayIcon from "@/components/icons/PlayIcon.vue";
 import StopIcon from "@/components/icons/StopIcon.vue";
 import PauseIcon from "@/components/icons/PauseIcon.vue";
 import QuestionIcon from "@/components/icons/QuestionIcon.vue";
@@ -123,7 +122,6 @@ const phrase = ref("");
 const error = ref(null);
 const globalLoading = ref(true);
 const loading = ref(false);
-const accessToken = ref(null);
 
 const timer = ref("02:00");
 const countdown = ref(120);
@@ -151,28 +149,60 @@ async function generatePhrase(mode) {
   phraseFilled.value = false;
 
   try {
+    await getNewPhrases();
+
+    if (newPhrases.value.length > 0) {
+      const nextPhrase = newPhrases.value[0];
+      phrase.value = nextPhrase;
+
+      await saveCurrentPhrase(nextPhrase);
+      await removeUsedNewPhrase(nextPhrase);
+
+      setTimeout(() => {
+        phraseFilled.value = true;
+      }, 1000);
+
+      return;
+    }
+
+    await getUserPhrases();
+
     const response = await axios.post(`${API_BASE_URL}/generatePhrase`, {
       mode,
       uid: currentUser.value.uid,
     });
 
-    phrase.value = response?.data?.phrase;
-    if (!phrase.value) throw new Error("Фраза не найдена");
+    const list = response?.data?.phrases || [];
+    if (!Array.isArray(list) || list.length === 0) throw new Error("Фразы не найдены");
+
+    const existing = userPhrases.value.map(p => p.toLowerCase());
+    const normalize = s => s.toLowerCase().replace(/[.,!?"'«»]/g, '').trim();
+
+    const unique = list.filter(p => {
+      const normalized = normalize(p);
+      return !existing.some(e => normalized.includes(e) || e.includes(normalize(e)));
+    });
+
+    if (unique.length === 0) throw new Error("Все сгенерированные фразы уже использованы");
+
+    const nextPhrase = unique[0];
+    phrase.value = nextPhrase;
+
+    await saveNewPhrases(unique);
+    await saveCurrentPhrase(nextPhrase);
+    await removeUsedNewPhrase(nextPhrase);
 
     setTimeout(() => {
       phraseFilled.value = true;
     }, 1000);
 
-    savePhrase(phrase.value);
   } catch (err) {
     console.error("Ошибка при генерации фразы:", err);
-    error.value =
-      err.response?.data?.error || "Не удалось сгенерировать фразу";
+    error.value = err.response?.data?.error || "Не удалось сгенерировать фразу";
   } finally {
     loading.value = false;
   }
 }
-
 
 function startCountdown() {
   showTimer.value = true;
