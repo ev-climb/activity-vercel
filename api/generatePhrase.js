@@ -12,16 +12,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // const prompt = `Придумай случайное слово или словосочетание для игры Активити по следующим правилам:
-    //   1. Фраза подходит для того, чтобы её значение можно было объяснить при помощи ${mode === 'draw' ? 'рисунка' : 'жестов'};
-    //   2. Составь фразу из одного слова, двух или трех.
-    //   4. Исключить: цвета, имена, времена года, сложные термины;
-    //   5. Примеры: "Оттепель", "Парадный марш", "Треск в обшивке";
-    //   7. Верни только саму фразу, без кавычек и комментариев.
-    //   8. Уровень сложности - максимальный.
-    //   Покажи список из 10 уникальных подходящих слов или фраз.
-    //   `;
-
     const prompt = `Come up with a random word or phrase for the Activity game according to the following rules:
       1. Is the phrase suitable so that its meaning can be explained using ${mode};
       2. Make a phrase with one, two, or three words.;
