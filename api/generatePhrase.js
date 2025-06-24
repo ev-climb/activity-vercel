@@ -1,9 +1,5 @@
-// /api/generatePhrase.js
-import admin from '../lib/firebaseAdmin.js';
-import { getFirestore } from 'firebase-admin/firestore';
 import axios from 'axios';
-
-const db = getFirestore();
+import { db } from '../lib/firebaseAdmin.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
