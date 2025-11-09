@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   function getRandom() {
-    return Math.floor(Math.random() * 4);
+    return Math.floor(Math.random() * 11);
   }
 
   const promptOptions = [
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     const prompt = `You are a creative word generator for a Russian Activity-like game. Come up with a random word or phrase for the Activity game according to the following rules:
       Is the phrase suitable so that its meaning can be explained using ${mode};
       ${promptOptions[getRandom()]}
-      Show only one phrase or word, without any symbols and descriptions;
+      Show a list of 10 unique suitable words or phrases.
       Use russian language.`;
 
     const openaiRes = await axios.post(

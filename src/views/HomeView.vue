@@ -159,19 +159,21 @@ async function generatePhrase(mode) {
   try {
     await getNewPhrases();
 
-    if (newPhrases.value.length > 0) {
-      const nextPhrase = newPhrases.value[0];
-      phrase.value = nextPhrase;
+    const randomIndex = Math.floor(Math.random() * (newPhrases.value.length - 1));
+    
+    // if (newPhrases.value.length > 0) {
+    //   const nextPhrase = newPhrases.value[randomIndex];
+    //   phrase.value = nextPhrase;
 
-      await saveCurrentPhrase(nextPhrase);
-      await removeUsedNewPhrase(nextPhrase);
+    //   await saveCurrentPhrase(nextPhrase);
+    //   await removeUsedNewPhrase(nextPhrase);
 
-      setTimeout(() => {
-        phraseFilled.value = true;
-      }, 1000);
+    //   setTimeout(() => {
+    //     phraseFilled.value = true;
+    //   }, 1000);
 
-      return;
-    }
+    //   return;
+    // }
 
     await getUserPhrases();
 
@@ -202,7 +204,7 @@ async function generatePhrase(mode) {
     if (unique.length === 0)
       throw new Error("Все сгенерированные фразы уже использованы");
 
-    const nextPhrase = unique[0];
+    const nextPhrase = unique[randomIndex];
     phrase.value = nextPhrase;
 
     await saveNewPhrases(unique);
