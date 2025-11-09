@@ -125,7 +125,7 @@ import LogOutIcon from "@/components/icons/LogOutIcon.vue";
 import SettingsIcon from "@/components/icons/SettingsIcon.vue";
 import StopIcon from "@/components/icons/StopIcon.vue";
 import NextIcon from "@/components/icons/NextIcon.vue";
-import PauseIcon from "@/components/icons/PauseIcon.vue";к
+import PauseIcon from "@/components/icons/PauseIcon.vue";
 import QuestionIcon from "@/components/icons/QuestionIcon.vue";
 import RotateIcon from "@/components/icons/RotateIcon.vue";
 
