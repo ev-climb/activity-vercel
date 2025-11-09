@@ -158,20 +158,22 @@ async function generatePhrase(mode) {
 
   try {
     await getNewPhrases();
+
+    const randomPhrase = newPhrases.value[Math.floor(Math.random() * (newPhrases.value.length - 1))] || null;
     
-    // if (newPhrases.value.length > 0) {
-    //   const nextPhrase = newPhrases.value[randomIndex];
-    //   phrase.value = nextPhrase;
+    if (newPhrases.value.length > 50) {
+      const nextPhrase = randomPhrase;
+      phrase.value = nextPhrase;
 
-    //   await saveCurrentPhrase(nextPhrase);
-    //   await removeUsedNewPhrase(nextPhrase);
+      await saveCurrentPhrase(nextPhrase);
+      await removeUsedNewPhrase(nextPhrase);
 
-    //   setTimeout(() => {
-    //     phraseFilled.value = true;
-    //   }, 1000);
+      setTimeout(() => {
+        phraseFilled.value = true;
+      }, 1000);
 
-    //   return;
-    // }
+      return;
+    }
 
     await getUserPhrases();
 
@@ -202,14 +204,18 @@ async function generatePhrase(mode) {
 
     const unique = list.filter((p) => {
       const phraseSet = normalizeWords(p);
-      return !userPhrases.value.some((e) => {
+      return (
+        !userPhrases.value.some((e) => {
         const existingSet = normalizeWords(e);
         return isTooSimilar(phraseSet, existingSet);
-      });
+      }) && 
+        !newPhrases.value.some((e) => {
+        const existingSet = normalizeWords(e);
+        return isTooSimilar(phraseSet, existingSet);
+      }));
     });
-    
+
     const randomUnique = unique[Math.floor(Math.random() * (unique.length - 1))];
-    const randomPhrase = newPhrases.value[Math.floor(Math.random() * (newPhrases.value.length - 1))]
 
     if (unique.length === 0)
       throw new Error("Все сгенерированные фразы уже использованы");
