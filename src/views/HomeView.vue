@@ -18,6 +18,11 @@
           class="round-icon stop"
           @click.stop="stopGame"
         />
+        <NextIcon
+          v-if="isPaused && phrase"
+          class="round-icon next"
+          @click.stop="generatePhrase('show')"
+        />
 
         <p v-if="showHint" class="hint">{{ phrase }}</p>
         <div v-if="error" class="error" @click="stopGame()">
@@ -119,7 +124,8 @@ import Speak from "@/components/icons/Speak.vue";
 import LogOutIcon from "@/components/icons/LogOutIcon.vue";
 import SettingsIcon from "@/components/icons/SettingsIcon.vue";
 import StopIcon from "@/components/icons/StopIcon.vue";
-import PauseIcon from "@/components/icons/PauseIcon.vue";
+import NextIcon from "@/components/icons/NextIcon.vue";
+import PauseIcon from "@/components/icons/PauseIcon.vue";к
 import QuestionIcon from "@/components/icons/QuestionIcon.vue";
 import RotateIcon from "@/components/icons/RotateIcon.vue";
 
@@ -812,6 +818,16 @@ main {
 .stop {
   top: 24%;
   left: 20%;
+  transition: transform 0.1s ease, filter 0.1s ease;
+
+  &:active {
+    transform: scale(0.95);
+    filter: brightness(0.9);
+  }
+}
+.next {
+  top: 24%;
+  right: 20%;
   transition: transform 0.1s ease, filter 0.1s ease;
 
   &:active {
