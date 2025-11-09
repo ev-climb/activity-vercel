@@ -199,12 +199,13 @@ async function generatePhrase(mode) {
       });
     });
 
-    const randomIndex = Math.floor(Math.random() * (unique.length - 1));
+    const randomUnique = unique[Math.floor(Math.random() * (unique.length - 1))];
+    const randomPhrase = newPhrases[Math.floor(Math.random() * (newPhrases.value.length - 1))]
 
     if (unique.length === 0)
       throw new Error("Все сгенерированные фразы уже использованы");
 
-    const nextPhrase = unique[randomIndex];
+    const nextPhrase = newPhrases.value.length ? randomPhrase : randomUnique;
     phrase.value = nextPhrase;
 
     await saveNewPhrases(unique);
