@@ -184,21 +184,30 @@ async function generatePhrase(mode) {
     if (!Array.isArray(list) || list.length === 0) throw new Error("Фразы не найдены");
     console.log("Сгенерированные фразы:", list);
 
-    const existing = userPhrases.value.map((p) => p.toLowerCase());
-    const normalize = (s) =>
-      s
-        .toLowerCase()
-        .replace(/[.,!?"'«»]/g, "")
-        .trim();
+    const normalizeWords = (s) =>
+      new Set(
+        s
+          .toLowerCase()
+          .replace(/[.,!?"'«»]/g, "")
+          .trim()
+          .split(/\s+/)
+      );
+
+    const isTooSimilar = (phraseSet, existingSet, threshold = 0.6) => {
+      const intersection = new Set([...phraseSet].filter(x => existingSet.has(x)));
+      const union = new Set([...phraseSet, ...existingSet]);
+      const similarity = intersection.size / union.size;
+      return similarity >= threshold;
+    };
 
     const unique = list.filter((p) => {
-      const norm = normalize(p);
-      return !existing.some((e) => {
-        const en = normalize(e);
-        return norm.includes(en) || en.includes(norm);
+      const phraseSet = normalizeWords(p);
+      return !userPhrases.value.some((e) => {
+        const existingSet = normalizeWords(e);
+        return isTooSimilar(phraseSet, existingSet);
       });
     });
-
+    
     const randomUnique = unique[Math.floor(Math.random() * (unique.length - 1))];
     const randomPhrase = newPhrases.value[Math.floor(Math.random() * (newPhrases.value.length - 1))]
 
