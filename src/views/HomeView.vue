@@ -158,8 +158,6 @@ async function generatePhrase(mode) {
 
   try {
     await getNewPhrases();
-
-    const randomIndex = Math.floor(Math.random() * (newPhrases.value.length - 1));
     
     // if (newPhrases.value.length > 0) {
     //   const nextPhrase = newPhrases.value[randomIndex];
@@ -200,6 +198,8 @@ async function generatePhrase(mode) {
         return norm.includes(en) || en.includes(norm);
       });
     });
+
+    const randomIndex = Math.floor(Math.random() * (unique.length - 1));
 
     if (unique.length === 0)
       throw new Error("Все сгенерированные фразы уже использованы");
