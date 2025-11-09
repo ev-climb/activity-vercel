@@ -159,7 +159,7 @@ async function generatePhrase(mode) {
   try {
     await getNewPhrases();
 
-    const randomPhrase = newPhrases.value[Math.floor(Math.random() * (newPhrases.value.length - 1))] || null;
+    const randomPhrase = newPhrases.value[Math.floor(Math.random() * newPhrases.value.length)] || null;
     
     if (newPhrases.value.length > 50) {
       const nextPhrase = randomPhrase;
@@ -197,9 +197,8 @@ async function generatePhrase(mode) {
 
     const isTooSimilar = (phraseSet, existingSet, threshold = 0.6) => {
       const intersection = new Set([...phraseSet].filter(x => existingSet.has(x)));
-      const union = new Set([...phraseSet, ...existingSet]);
-      const similarity = intersection.size / union.size;
-      return similarity >= threshold;
+      if (intersection.size > 0) return true;
+      return false;
     };
 
     const unique = list.filter((p) => {
@@ -215,7 +214,7 @@ async function generatePhrase(mode) {
       }));
     });
 
-    const randomUnique = unique[Math.floor(Math.random() * (unique.length - 1))];
+    const randomUnique = unique[Math.floor(Math.random() * unique.length)];
 
     if (unique.length === 0)
       throw new Error("Все сгенерированные фразы уже использованы");
