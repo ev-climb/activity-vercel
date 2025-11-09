@@ -200,7 +200,7 @@ async function generatePhrase(mode) {
     });
 
     const randomUnique = unique[Math.floor(Math.random() * (unique.length - 1))];
-    const randomPhrase = newPhrases[Math.floor(Math.random() * (newPhrases.value.length - 1))]
+    const randomPhrase = newPhrases.value[Math.floor(Math.random() * (newPhrases.value.length - 1))]
 
     if (unique.length === 0)
       throw new Error("Все сгенерированные фразы уже использованы");
