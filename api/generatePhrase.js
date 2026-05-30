@@ -12,47 +12,47 @@ export default async function handler(req, res) {
   }
 
   function getRandom() {
-    return Math.floor(Math.random() * 11);
+    return Math.floor(Math.random() * 12);
   }
 
   const promptOptions = [
-    // Одно абстрактное или сложное слово
-    "Suggest one Russian word that is abstract, intellectually stimulating, and not a physical object. Focus on concepts, feelings, or ideas. Reply with just the word.",
-    "Give a single uncommon Russian word that could be challenging to act out or draw—lean toward philosophical, psychological, or social phenomena. No explanations.",
-    "Share a Russian word that describes a situation, state, or emotion that evokes a vivid mental image but is notoriously difficult to convey without speaking.",
-
-    // Пример как 'сарказм', 'обещание', 'лакомство'
-    "Choose one expressive Russian word comparable to 'сарказм', 'обещание', or 'лакомство'—choose something frequently discussed but hard to visualize. Only provide the word.",
-    "Generate a Russian term that is memorable yet elusive in meaning—words about feelings, experiences, or actions, recognizable but not physical. Output the word alone.",
-    "Pick one clever Russian word that represents a subtle or nuanced idea, challenge the players with a term familiar but hard to pantomime or sketch.",
-
-    // Сочетание двух существительных
-    "Suggest an original Russian phrase with two nouns forming an unexpected, vivid, or intriguing compound. The result should spark curiosity and be tricky for gestures or images.",
-    "Generate a memorable Russian combination of two nouns (such as 'чемодан приключений' or 'сказка времени'), making sure it's difficult to explain without words.",
-    "Give a two-noun Russian phrase that reveals an imaginative situation or object—avoid obvious pairs, favor emotional or metaphorical associations.",
-
-    // Сочетание прилагательного и существительного
-    "Suggest one Russian phrase with an adjective and a noun, emphasizing poetic, conceptual, or unusual qualities. Output only the phrase.",
-    "Generate an imaginative Russian adjective-noun pair that feels mysterious or thought-provoking rather than basic or concrete—examples: 'невидимый аргумент', 'тревожная радость'. Only the phrase.",
-    "Create one Russian phrase in which an adjective describes a noun in an unusual way, making the meaning hard to depict or act out nonverbally.",
+    "everyday mishaps or awkward moments as noun phrases. Examples: конфуз на свидании / пробка в пятницу / штраф за парковку",
+    "small social situations as noun phrases. Examples: звонок в ночи / скандал без причины / опоздание на час",
+    "an emotion in a specific context, NOT a standalone abstract noun. Examples: неловкое молчание / злость без причины / запоздалое извинение",
+    "feelings grounded in everyday life, not academic terms. Examples: притворная радость / чужая вина / зависть к другу",
+    "a type of person in an unexpected situation. Examples: забывчивый врач / повар без вкуса / молчаливый адвокат",
+    "a vivid concrete image from daily life (NOT simple nature like 'лесной дождь'). Examples: мокрые носки / сосед с дрелью / кот на совещании",
+    "a single expressive Russian noun — can be abstract or emotional. Examples: обида / ловкость / растерянность / упрямство / зависть",
+    "two nouns in an unexpected pairing. Examples: побег из отпуска / дружба с врагом / алиби без слов",
+    "an adjective-noun pair from human experience (not 'синее небо', not '-изм'). Examples: неудобный вопрос / чужая тайна / громкий намёк",
+    "a phrase built on irony or contradiction. Examples: громкая тишина / занятой бездельник / честный обман",
+    "a recognizable urban or social scene. Examples: очередь без конца / лифт в понедельник / совещание о совещании",
+    "a phrase mixing two unexpected domains (work+home, food+law, sport+medicine). Examples: диета в армии / отпуск с начальником / операция по расписанию",
   ];
 
   try {
-    const prompt = `You are a creative word generator for a Russian Activity-like game. Come up with a random word or phrase for the Activity game according to the following rules:
-      Is the phrase suitable so that its meaning can be explained using ${mode};
-      ${promptOptions[getRandom()]}
-      Show a list of 10 unique suitable words or phrases without any symbols and descriptions.
-      Use russian language.`;
+    const prompt = `Generate 10 short Russian phrases for an Activity game (Charades/Pictionary).
+      Mode: ${mode}.
+      Rules:
+        — 1–3 words MAX per phrase. Single nouns are allowed (обида, ловкость, упрямство).
+        — No verbs or infinitives (притворяться, уронить etc. are banned).
+        — No sentences, no commas, no explanations.
+        — Medium difficulty: not trivially obvious, not impossibly abstract.
+        — No words ending in -изм or -изация.
+        — No plain nature combinations (лесной дождь, морской закат etc. are banned).
+        — All 10 phrases must differ in theme and structure.
+      Theme for this batch: ${promptOptions[getRandom()]}
+      Output: 10 lines, one phrase per line, Russian only, no numbering.`;
 
     const openaiRes = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4-mini',
         messages: [
-          { role: 'system', content: 'Ты помощник, генерирующий фразы для игры' },
+          { role: 'system', content: 'Ты генератор коротких фраз для игры Активити. Отвечай только списком фраз.' },
           { role: 'user', content: prompt },
         ],
-        temperature: 0.7,
+        temperature: 0.9,
       },
       {
         headers: {

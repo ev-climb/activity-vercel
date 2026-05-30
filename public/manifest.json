@@ -1,0 +1,16 @@
+{
+  "name": "PIM Activity",
+  "short_name": "Activity",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "background_color": "#0099ff",
+  "theme_color": "#0099ff",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

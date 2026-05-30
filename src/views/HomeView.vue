@@ -1,29 +1,32 @@
 <template>
-  <main class="main" :class="{ 'red-bg': countdown === 0 }">
+  <main class="main">
     <GlobalLoader v-if="globalLoading" />
     <LogIn v-else-if="!currentUser?.uid" />
     <template v-else>
       <section v-if="showPhrase" class="phrase-container">
-        <QuestionIcon
-          v-if="!isPreparing && phrase"
-          class="round-icon question"
-          @mousedown="showHint = true"
-          @mouseup="showHint = false"
-          @mouseleave="showHint = false"
-          @touchstart.prevent="showHint = true"
-          @touchend.prevent="showHint = false"
-        />
-        <StopIcon
-          v-if="isPaused && phrase"
-          class="round-icon stop"
-          @click.stop="stopGame"
-        />
-        <NextIcon
-          v-if="isPaused && phrase"
-          class="round-icon next"
-          @click.stop="generatePhrase('show')"
-        />
+        <div class="game-controls">
+          <HomeIcon
+            v-if="(isPaused || (showPhraseText && !isPreparing)) && phrase"
+            class="round-icon"
+            @click.stop="stopGame"
+          />
+          <QuestionIcon
+            v-if="!isPreparing && !showPhraseText && phrase"
+            class="round-icon"
+            @mousedown="showHint = true"
+            @mouseup="showHint = false"
+            @mouseleave="showHint = false"
+            @touchstart.prevent="showHint = true"
+            @touchend.prevent="showHint = false"
+          />
+          <ShuffleIcon
+            v-if="(isPaused || (showPhraseText && !isPreparing)) && phrase"
+            class="round-icon"
+            @click.stop="generatePhrase('show')"
+          />
+        </div>
 
+        <p v-if="isPreparing" class="prep-label">время на подготовку...</p>
         <p v-if="showHint" class="hint">{{ phrase }}</p>
         <div v-if="error" class="error" @click="stopGame()">
           <img src="@/assets/images/facepalm.png" class="facepalm" alt="icon" />
@@ -34,20 +37,27 @@
         <template v-else>
           <div
             class="circle"
-            :class="{ 'fill-animation': phraseFilled }"
             @click="togglePause"
           >
             <div v-if="loading" class="loader-container">
-              <span class="loader">Load&nbsp;ng</span>
+              <div class="wave-loader">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
             </div>
             <template v-else>
               <div class="wave-container">
-                <div class="wave-below fill"></div>
+                <div class="wave-below" :class="waveClass" :style="waveStyle">
+                  <span v-for="i in 8" :key="i" class="bubble" :class="`bbl-${i}`"></span>
+                </div>
               </div>
               <p v-if="showPhraseText" class="phrase">{{ phrase }}</p>
-              <p v-else-if="!isPaused && showTimer" class="phrase timer">{{ timer }}</p>
+              <p v-else-if="showTimer && !isPaused" class="phrase timer" :class="{ 'timer-warning': countdown <= 30 }">{{ timer }}</p>
 
-              <PauseIcon v-else class="pause" />
+              <PauseIcon v-else-if="isPaused" class="pause" />
             </template>
           </div>
         </template>
@@ -112,7 +122,7 @@ import {
   saveNewPhrases,
   userPhrases,
 } from "@/stores/phrases";
-import { loadSettings, saveUserSettings } from "@/stores/settings";
+import { loadSettings, preparationTime, explanationTime } from "@/stores/settings";
 
 import GlobalLoader from "@/components/GlobalLoader.vue";
 import LogIn from "@/components/LogIn.vue";
@@ -123,8 +133,8 @@ import Show from "@/components/icons/Show.vue";
 import Speak from "@/components/icons/Speak.vue";
 import LogOutIcon from "@/components/icons/LogOutIcon.vue";
 import SettingsIcon from "@/components/icons/SettingsIcon.vue";
-import StopIcon from "@/components/icons/StopIcon.vue";
-import NextIcon from "@/components/icons/NextIcon.vue";
+import HomeIcon from "@/components/icons/HomeIcon.vue";
+import ShuffleIcon from "@/components/icons/ShuffleIcon.vue";
 import PauseIcon from "@/components/icons/PauseIcon.vue";
 import QuestionIcon from "@/components/icons/QuestionIcon.vue";
 import RotateIcon from "@/components/icons/RotateIcon.vue";
@@ -144,43 +154,51 @@ const isPaused = ref(false);
 const isPreparing = ref(false);
 
 const isSettings = ref(false);
-const preparationTime = ref(20);
-const explanationTime = ref(120);
 
 let intervalId = null;
+let preparationTimeoutId = null;
 
 const showPhrase = ref(false);
-const phraseFilled = ref(false);
+const showPhraseText = ref(false);
 const showHint = ref(false);
+const waveClass = ref('');
+const waveStyle = ref({});
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 async function generatePhrase(mode) {
+  clearInterval(intervalId);
+  intervalId = null;
+  if (preparationTimeoutId) {
+    clearTimeout(preparationTimeoutId);
+    preparationTimeoutId = null;
+  }
+  countdown.value = explanationTime.value;
+  showTimer.value = false;
+  isPaused.value = false;
+  isPreparing.value = false;
+  showPhraseText.value = false;
+  waveClass.value = '';
+  waveStyle.value = {};
+
   loading.value = true;
   error.value = null;
   phrase.value = null;
   showPhrase.value = true;
-  phraseFilled.value = false;
 
   try {
     await getNewPhrases();
 
-    const randomPhrase = newPhrases.value[Math.floor(Math.random() * newPhrases.value.length)] || null;
-    
-    if (newPhrases.value.length > 50) {
-      const nextPhrase = randomPhrase;
+    // Use cache if we have enough phrases
+    if (newPhrases.value.length >= 5) {
+      const nextPhrase = newPhrases.value[Math.floor(Math.random() * newPhrases.value.length)];
       phrase.value = nextPhrase;
-
       await saveCurrentPhrase(nextPhrase);
       await removeUsedNewPhrase(nextPhrase);
-
-      setTimeout(() => {
-        phraseFilled.value = true;
-      }, 1000);
-
       return;
     }
 
+    // Cache is low — fetch 10 new phrases from API
     await getUserPhrases();
 
     const response = await axios.post(`${API_BASE_URL}/generatePhrase`, {
@@ -190,51 +208,24 @@ async function generatePhrase(mode) {
 
     const list = response?.data?.phrases || [];
     if (!Array.isArray(list) || list.length === 0) throw new Error("Фразы не найдены");
-    console.log("Сгенерированные фразы:", list);
 
     const normalizeWords = (s) =>
-      new Set(
-        s
-          .toLowerCase()
-          .replace(/[.,!?"'«»]/g, "")
-          .trim()
-          .split(/\s+/)
-      );
-
-    const isTooSimilar = (phraseSet, existingSet, threshold = 0.6) => {
-      const intersection = new Set([...phraseSet].filter(x => existingSet.has(x)));
-      if (intersection.size > 0) return true;
-      return false;
-    };
+      new Set(s.toLowerCase().replace(/[.,!?"'«»]/g, "").trim().split(/\s+/));
 
     const unique = list.filter((p) => {
       const phraseSet = normalizeWords(p);
-      return (
-        !userPhrases.value.some((e) => {
-        const existingSet = normalizeWords(e);
-        return isTooSimilar(phraseSet, existingSet);
-      }) && 
-        !newPhrases.value.some((e) => {
-        const existingSet = normalizeWords(e);
-        return isTooSimilar(phraseSet, existingSet);
-      }));
+      return !userPhrases.value.some(e => [...phraseSet].some(w => normalizeWords(e).has(w))) &&
+             !newPhrases.value.some(e => [...phraseSet].some(w => normalizeWords(e).has(w)));
     });
 
-    const randomUnique = unique[Math.floor(Math.random() * unique.length)];
+    if (unique.length === 0) throw new Error("Все сгенерированные фразы уже использованы");
 
-    if (unique.length === 0)
-      throw new Error("Все сгенерированные фразы уже использованы");
-
-    const nextPhrase = newPhrases.value.length ? randomPhrase : randomUnique;
+    const nextPhrase = unique[Math.floor(Math.random() * unique.length)];
     phrase.value = nextPhrase;
 
     await saveNewPhrases(unique);
     await saveCurrentPhrase(nextPhrase);
     await removeUsedNewPhrase(nextPhrase);
-
-    setTimeout(() => {
-      phraseFilled.value = true;
-    }, 1000);
   } catch (err) {
     console.error("Ошибка при генерации фразы:", err);
     error.value = err.response?.data?.error || "Не удалось сгенерировать фразу";
@@ -244,6 +235,7 @@ async function generatePhrase(mode) {
 }
 
 function startCountdown() {
+  clearInterval(intervalId);
   showTimer.value = true;
   updateTimerDisplay();
 
@@ -253,8 +245,6 @@ function startCountdown() {
       updateTimerDisplay();
     } else {
       clearInterval(intervalId);
-      showTimer.value = false;
-      showPhraseText.value = true;
     }
   }, 1000);
 }
@@ -266,82 +256,60 @@ function updateTimerDisplay() {
 }
 
 function togglePause() {
-  if (countdown.value === 0) {
+  if (showPhraseText.value && !isPreparing.value) {
     stopGame();
     return;
   }
+
+  if (isPreparing.value) {
+    if (preparationTimeoutId) {
+      clearTimeout(preparationTimeoutId);
+      preparationTimeoutId = null;
+    }
+    isPreparing.value = false;
+    isPaused.value = false;
+    showPhraseText.value = false;
+    waveClass.value = 'fill';
+    startCountdown();
+    return;
+  }
+
   isPaused.value = !isPaused.value;
 
-  const wave = document.querySelector(".wave-below");
-
-  if (isPaused.value && wave) {
+  if (isPaused.value) {
     clearInterval(intervalId);
-
-    if (isPreparing.value) {
-      if (preparationTimeoutId) {
-        clearTimeout(preparationTimeoutId);
-        preparationTimeoutId = null;
-      }
-
-      wave.classList.remove("fill");
-      isPreparing.value = false;
-      showPhraseText.value = false;
-      showTimer.value = true;
-      countdown.value = explanationTime.value;
-    } else {
-      wave.style.animationPlayState = "paused";
-    }
+    waveStyle.value = { animationPlayState: 'paused' };
   } else {
-    if (!isPreparing.value && countdown.value < explanationTime.value) {
-      wave.style.animationPlayState = "running";
-      startCountdown();
-    } else {
-      wave.classList.add("drain");
-      wave.style.animationPlayState = "running";
-      showTimer.value = true;
-      countdown.value = explanationTime.value;
-      startCountdown();
-    }
+    waveStyle.value = {};
+    startCountdown();
   }
 }
 
 function stopGame() {
   clearInterval(intervalId);
+  if (preparationTimeoutId) {
+    clearTimeout(preparationTimeoutId);
+    preparationTimeoutId = null;
+  }
   showTimer.value = false;
   showPhrase.value = false;
   phrase.value = null;
-  countdown.value = 120;
-  timer.value = "02:00";
+  countdown.value = explanationTime.value;
+  updateTimerDisplay();
   isPaused.value = false;
+  isPreparing.value = false;
+  showPhraseText.value = false;
+  waveClass.value = '';
+  waveStyle.value = {};
   error.value = null;
-
-  const wave = document.querySelector(".wave-below");
-  if (wave) {
-    wave.classList.remove("fill");
-    wave.classList.add("drain");
-    wave.style.animationPlayState = "running";
-  }
-
-  const phraseEl = document.querySelector(".phrase");
-  if (phraseEl) {
-    phraseEl.style.display = "block";
-  }
 }
-
-let preparationTimeoutId = null;
-const showPhraseText = ref(false);
 
 watch(loading, (newVal, oldVal) => {
   if (oldVal === true && newVal === false && phrase.value) {
     isSettings.value = false;
-    phraseFilled.value = true;
     isPreparing.value = true;
     showPhraseText.value = true;
     countdown.value = explanationTime.value;
-    saveUserSettings({
-      preparationTime: preparationTime.value,
-      explanationTime: explanationTime.value,
-    });
 
     document.documentElement.style.setProperty(
       "--prep-time",
@@ -353,26 +321,16 @@ watch(loading, (newVal, oldVal) => {
     );
 
     nextTick(() => {
-      const wave = document.querySelector(".wave-below");
+      waveClass.value = 'drain';
+      waveStyle.value = {};
 
-      if (wave) {
-        wave.classList.remove("drain");
-        wave.classList.add("fill");
-        wave.style.animationPlayState = "running";
-
-        preparationTimeoutId = setTimeout(() => {
-          if (isPaused.value) return;
-
-          isPreparing.value = false;
-          showPhraseText.value = false;
-
-          wave.classList.remove("fill");
-          wave.classList.add("drain");
-          wave.style.animationPlayState = "running";
-
-          startCountdown();
-        }, preparationTime.value * 1000);
-      }
+      preparationTimeoutId = setTimeout(() => {
+        isPreparing.value = false;
+        isPaused.value = false;
+        showPhraseText.value = false;
+        waveClass.value = 'fill';
+        startCountdown();
+      }, preparationTime.value * 1000);
     });
   }
 });
@@ -383,8 +341,10 @@ watch(countdown, (value) => {
     isPaused.value = false;
     isPreparing.value = false;
     showPhraseText.value = true;
+    waveClass.value = '';
+    waveStyle.value = {};
   }
-  if (value === 119) {
+  if (value === explanationTime.value - 1) {
     startSound.currentTime = 0;
     startSound.play();
   }
@@ -420,9 +380,14 @@ main {
   width: 100%;
   height: 100dvh;
   max-width: 400px;
-  overflow-y: scroll;
+  overflow-y: auto;
   scroll-snap-type: y mandatory;
+  scrollbar-width: none;
   position: relative;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
   background: linear-gradient(to bottom, #0099ff 0%, #fff 100%);
 
   .first-screen {
@@ -574,8 +539,13 @@ main {
     box-shadow: 0 0 20px rgb(10, 10, 10);
     height: 90vh;
     position: relative;
-    overflow-y: scroll;
+    overflow-y: auto;
     scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
 
     .first-screen {
       height: 90vh;
@@ -615,25 +585,19 @@ main {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
 .circle {
-  position: relative;
-  padding: 15px;
-  border-radius: 50%;
-  width: 60vw;
-  height: 60vw;
-  max-width: 300px;
-  max-height: 300px;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: 0 0 10px #f8f8f8ec;
-  transition: transform 0.1s ease, filter 0.1s ease;
+  transition: filter 0.1s ease;
 
   &:active {
-    transform: scale(0.95);
     filter: brightness(0.9);
   }
 }
@@ -645,10 +609,17 @@ main {
   color: #fff;
   font-family: "Roboto", sans-serif;
   z-index: 100;
+  opacity: 0.7;
 }
 
 .phrase.timer {
-  font-size: 48px;
+  font-size: 96px;
+  transition: color 0.5s ease;
+  opacity: 0.7;
+}
+
+.phrase.timer.timer-warning {
+  color: #e79d1f;
 }
 
 .wave-container {
@@ -658,6 +629,7 @@ main {
   width: 100%;
   height: 100%;
   z-index: 1;
+  overflow: hidden;
 }
 
 .wave-below {
@@ -666,36 +638,91 @@ main {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #0099ff;
+  background: linear-gradient(to bottom, #00d4f0 0%, #0099cc 30%, #005588 65%, #002244 100%);
   z-index: -1;
 }
 
+.wave-below::before,
+.wave-below::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 400%;
+  background-repeat: repeat-x;
+  background-position: 0 bottom;
+}
+
+.wave-below::before {
+  bottom: calc(100% - 40px);
+  top: auto;
+  height: 90px;
+  background-size: 25% 90px;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 90'><path fill='%2300d4f0' d='M0,30 C200,55 400,5 600,30 C700,42 750,18 800,30 L800,90 L0,90 Z'/></svg>");
+  animation: wave-scroll-1 4s linear infinite;
+}
+
+.wave-below::after {
+  bottom: calc(100% - 40px);
+  top: auto;
+  height: 70px;
+  background-size: 25% 70px;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 70'><path fill='%2300d4f0' d='M0,25 C133,45 267,5 400,25 C533,45 667,5 800,25 L800,70 L0,70 Z'/></svg>");
+  opacity: 0.7;
+  animation: wave-scroll-2 6s linear infinite reverse;
+}
+
+@keyframes wave-scroll-1 {
+  to { transform: translateX(-25%); }
+}
+
+@keyframes wave-scroll-2 {
+  to { transform: translateX(-25%); }
+}
+
 .wave-below.fill {
-  clip-path: polygon(0% 100%, 0% 100%, 100% 100%, 100% 0%);
-  animation: fill-below calc(var(--prep-time, 20s)) linear forwards;
+  animation: fill-below calc(var(--explain-time, 120s)) linear forwards;
 }
 
 .wave-below.drain {
-  clip-path: polygon(0% 0%, 0% 100%, 100% 100%, 100% 0%);
-  animation: drain-below calc(var(--explain-time, 120s)) linear forwards;
-}
-
-@keyframes drain-below {
-  0% {
-    clip-path: inset(0 0 0 0);
-  }
-  100% {
-    clip-path: inset(100% 0 0 0);
-  }
+  animation: drain-below calc(var(--prep-time, 20s)) linear forwards;
 }
 
 @keyframes fill-below {
-  0% {
-    clip-path: inset(100% 0 0 0); /* Весь блок скрыт снизу */
-  }
-  100% {
-    clip-path: inset(0 0 0 0); /* Полностью видим */
-  }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes drain-below {
+  from { transform: translateY(0); }
+  to { transform: translateY(calc(100% + 100px)); }
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  z-index: 0;
+  animation: bubble-rise linear infinite;
+  pointer-events: none;
+}
+
+.bbl-1 { left: 10%; top: 60%; width: 7px;  height: 7px;  animation-duration: 5.0s; animation-delay: 0.0s; }
+.bbl-2 { left: 25%; top: 75%; width: 4px;  height: 4px;  animation-duration: 7.2s; animation-delay: 1.5s; }
+.bbl-3 { left: 42%; top: 55%; width: 9px;  height: 9px;  animation-duration: 6.0s; animation-delay: 3.1s; }
+.bbl-4 { left: 58%; top: 70%; width: 5px;  height: 5px;  animation-duration: 8.5s; animation-delay: 0.7s; }
+.bbl-5 { left: 72%; top: 50%; width: 6px;  height: 6px;  animation-duration: 5.8s; animation-delay: 4.2s; }
+.bbl-6 { left: 85%; top: 80%; width: 4px;  height: 4px;  animation-duration: 7.0s; animation-delay: 2.4s; }
+.bbl-7 { left: 18%; top: 65%; width: 5px;  height: 5px;  animation-duration: 6.5s; animation-delay: 5.5s; }
+.bbl-8 { left: 63%; top: 78%; width: 8px;  height: 8px;  animation-duration: 9.0s; animation-delay: 1.0s; }
+
+@keyframes bubble-rise {
+  0%   { transform: translateY(0)     translateX(0);    opacity: 0;   }
+  8%   { opacity: 0.75; }
+  33%  { transform: translateY(-6vh)  translateX(-3px); }
+  66%  { transform: translateY(-12vh) translateX(3px);  }
+  82%  { opacity: 0.4; }
+  100% { transform: translateY(-18vh) translateX(1px);  opacity: 0;   }
 }
 
 .error {
@@ -711,89 +738,44 @@ main {
   }
 }
 
-.loader {
-  color: #fff;
-  position: relative;
-  display: inline-block;
-  margin-top: 10px;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 48px;
-  letter-spacing: 4px;
-  box-sizing: border-box;
+.wave-loader {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
 }
-.loader::before {
-  content: "";
-  position: absolute;
-  right: 70px;
-  bottom: 10px;
-  height: 28px;
-  width: 5.15px;
-  background: currentColor;
-  box-sizing: border-box;
-  animation: animloader1 1s linear infinite alternate;
-}
-.loader::after {
-  content: "";
-  width: 10px;
-  height: 10px;
-  position: absolute;
-  left: 125px;
-  top: 2px;
+
+.wave-loader span {
+  display: block;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #0099ff;
-  box-sizing: border-box;
-  animation: animloader 1s linear infinite alternate;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  animation: bubble-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes animloader {
-  0% {
-    transform: translate(0px, 0px) scaleX(1);
-  }
-  14% {
-    transform: translate(-12px, -16px) scaleX(1.05);
-  }
-  28% {
-    transform: translate(-27px, -28px) scaleX(1.07);
-  }
-  42% {
-    transform: translate(-46px, -35px) scaleX(1.1);
-  }
-  57% {
-    transform: translate(-70px, -37px) scaleX(1.1);
-  }
-  71% {
-    transform: translate(-94px, -32px) scaleX(1.07);
-  }
-  85% {
-    transform: translate(-111px, -22px) scaleX(1.05);
-  }
-  100% {
-    transform: translate(-125px, -9px) scaleX(1);
-  }
-}
+.wave-loader span:nth-child(1) { animation-delay: 0s; }
+.wave-loader span:nth-child(2) { animation-delay: 0.2s; }
+.wave-loader span:nth-child(3) { animation-delay: 0.4s; }
+.wave-loader span:nth-child(4) { animation-delay: 0.6s; }
+.wave-loader span:nth-child(5) { animation-delay: 0.8s; }
 
-@keyframes animloader1 {
-  0% {
-    box-shadow: 0 -6px, -122.9px -8px;
-  }
-  25%,
-  75% {
-    box-shadow: 0 0px, -122.9px -8px;
-  }
-  100% {
-    box-shadow: 0 0px, -122.9px -16px;
-  }
+@keyframes bubble-pulse {
+  0%, 100% { transform: scale(0.5); opacity: 0.3; }
+  50%       { transform: scale(1.2); opacity: 1; }
 }
 
 .pause {
-  width: 30px;
-  height: 30px;
+  width: 18dvw;
+  height: 18dvh;
   color: #fff;
   cursor: pointer;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 100;
+  opacity: 0.7;
   svg {
     width: 90%;
     height: 90%;
@@ -802,44 +784,61 @@ main {
   }
 }
 
-.red-bg {
-  background: linear-gradient(to bottom, #ff1100 0%, #fff 100%);
+.game-controls {
+  position: absolute;
+  bottom: 50px;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 50px;
 }
+
 .round-icon {
   color: #fff;
-  filter: drop-shadow(0 0 10px #e40808ec);
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: transform 0.1s ease, filter 0.1s ease;
+  flex-shrink: 0;
+
+  &:active {
+    transform: scale(0.95);
+    filter: brightness(0.9);
+  }
+}
+.prep-label {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  top: 40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 18px;
+  font-family: "Roboto", sans-serif;
+  z-index: 10;
+  pointer-events: none;
+  animation: prep-pulse 2s ease-in-out infinite;
 }
-.question {
-  top: 20%;
-}
-.stop {
-  top: 24%;
-  left: 20%;
-  transition: transform 0.1s ease, filter 0.1s ease;
 
-  &:active {
-    transform: scale(0.95);
-    filter: brightness(0.9);
-  }
+@keyframes prep-pulse {
+  0%, 100% { opacity: 0.2; }
+  50%       { opacity: 0.8; }
 }
-.next {
-  top: 24%;
-  right: 20%;
-  transition: transform 0.1s ease, filter 0.1s ease;
 
-  &:active {
-    transform: scale(0.95);
-    filter: brightness(0.9);
-  }
-}
 .hint {
   position: absolute;
-  top: 12%;
+  bottom: 126px;
+  left: 0;
+  right: 0;
   color: #fff;
   font-size: 26px;
+  z-index: 10;
+  text-align: center;
+  padding: 0 20px;
 }
 .facepalm {
   width: 50px;
