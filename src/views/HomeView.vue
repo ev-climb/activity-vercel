@@ -50,7 +50,7 @@
             </div>
             <template v-else>
               <div class="wave-container">
-                <div class="wave-below" :class="waveClass" :style="waveStyle">
+                <div class="wave-below" ref="waveEl" :class="waveClass" :style="waveStyle">
                   <span v-for="i in 8" :key="i" class="bubble" :class="`bbl-${i}`"></span>
                 </div>
               </div>
@@ -163,6 +163,7 @@ const showPhraseText = ref(false);
 const showHint = ref(false);
 const waveClass = ref('');
 const waveStyle = ref({});
+const waveEl = ref(null);
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -267,10 +268,37 @@ function togglePause() {
       preparationTimeoutId = null;
     }
     isPreparing.value = false;
-    isPaused.value = false;
-    showPhraseText.value = false;
-    waveClass.value = 'fill';
-    startCountdown();
+
+    // Capture current mid-animation Y position
+    let currentTy = 0;
+    if (waveEl.value) {
+      currentTy = new DOMMatrix(getComputedStyle(waveEl.value).transform).m42;
+    }
+
+    // Freeze wave at current position (no jump)
+    waveClass.value = '';
+    waveStyle.value = { transform: `translateY(${currentTy}px)`, transition: 'none' };
+
+    // One frame later: slide remaining water off-screen quickly
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        waveStyle.value = {
+          transform: 'translateY(calc(100% + 100px))',
+          transition: 'transform 0.35s ease-in',
+        };
+      });
+    });
+
+    // After fast drain completes, start main timer with fill animation
+    preparationTimeoutId = setTimeout(() => {
+      preparationTimeoutId = null;
+      isPaused.value = false;
+      showPhraseText.value = false;
+      waveClass.value = 'fill';
+      waveStyle.value = {};
+      startCountdown();
+    }, 400);
+
     return;
   }
 
@@ -638,7 +666,7 @@ main {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(to bottom, #00d4f0 0%, #0099cc 30%, #005588 65%, #002244 100%);
+  background: linear-gradient(to bottom, #00d4f0 5%, #0099cc 35%, #005588 65%, #002244 100%);
   z-index: -1;
 }
 
@@ -880,6 +908,35 @@ main {
       background: #ffffff2d;
       color: #fff;
     }
+  }
+}
+
+/* Desktop phone frame overrides */
+@media (min-width: 1024px) {
+  main {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: 100%;
+    height: 100%;
+
+    .first-screen {
+      height: 100%;
+
+      .scroll {
+        top: 70%;
+      }
+    }
+
+    .mode-buttons {
+      top: 100%;
+      height: 100%;
+    }
+  }
+
+  .phrase-container {
+    height: 100%;
   }
 }
 </style>
